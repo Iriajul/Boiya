@@ -1,9 +1,36 @@
+# apps/admin_api/urls.py
 from django.urls import path
-from .views import StudentManagementListView, StudentStatusUpdateView, StudentDeleteView, AdminLoginView
+from .views import AdminLoginView, AdminProfileView, LogoutView, AdminPasswordChangeView, AdminOtpVerifyView, ResendAdminOtpView, StudentManagementListView, ExportStudentsView, StudentStatusUpdateView, StudentDeleteView, GrantCoinsView, CurrencyStatsView, AllocateCoinsView, AllocationHistoryView, TransactionHistoryView, CategoryListCreateView, CategoryPauseView, CategoryPlayView, CategoryDeleteView, ProductListCreateView, ProductUpdateView, ProductPauseView, ProductPlayView, ProductDeleteView, TopPurchasingProductsView, CategoryDistributionView, CoinAnalyticsView, ProductCategoryRedemptionView, WeeklyTransactionVolumeView, TokenRefreshView
 
 urlpatterns = [
     path('login/', AdminLoginView.as_view(), name='admin_login'),
-    path('students/', StudentManagementListView.as_view(), name='student_management_list'),
+    path('verify-otp/', AdminOtpVerifyView.as_view(), name='admin_verify_otp'),
+    path('resend-otp/', ResendAdminOtpView.as_view(), name='admin_resend_otp'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('logout/', LogoutView.as_view(), name='admin_logout'), 
+    path('profile/', AdminProfileView.as_view(), name='admin-profile'),
+    path('profile/password/', AdminPasswordChangeView.as_view(), name='admin-password-change'),
+    path('students/', StudentManagementListView.as_view(), name='student_management'),
+    path('export-students/', ExportStudentsView.as_view(), name='export_students'),
     path('students/<int:id>/status/', StudentStatusUpdateView.as_view(), name='student_status_update'),
     path('students/<int:id>/', StudentDeleteView.as_view(), name='student_delete'),
+    path('grant-coins/', GrantCoinsView.as_view(), name='grant_coins'),
+    path('currency-stats/', CurrencyStatsView.as_view(), name='currency_stats'),
+    path('allocate-coins/', AllocateCoinsView.as_view(), name='allocate_coins'),
+    path('allocation-history/', AllocationHistoryView.as_view(), name='allocation_history'),
+    path('transaction-history/', TransactionHistoryView.as_view(), name='transaction_history'),
+    path('categories/', CategoryListCreateView.as_view(), name='category-list-create'),
+    path('categories/<int:pk>/pause/', CategoryPauseView.as_view(), name='category-pause'),
+    path('categories/<int:pk>/play/', CategoryPlayView.as_view(), name='category-play'),
+    path('categories/<int:pk>/', CategoryDeleteView.as_view(), name='category-delete'),
+    path('products/', ProductListCreateView.as_view(), name='product-list-create'),
+    path('products/<int:pk>/edit/', ProductUpdateView.as_view(), name='product-update'),
+    path('products/<int:pk>/pause/', ProductPauseView.as_view(), name='product-pause'),
+    path('products/<int:pk>/play/', ProductPlayView.as_view(), name='product-play'),
+    path('products/<int:pk>/', ProductDeleteView.as_view(), name='product-delete'),
+    path('marketplace/top-products/', TopPurchasingProductsView.as_view(), name='top-purchasing-products'),
+    path('marketplace/category-distribution/', CategoryDistributionView.as_view(), name='category-distribution'),
+    path('analytics/coin-issued-vs-spent/', CoinAnalyticsView.as_view(), name='coin-analytics'),
+    path('analytics/product-category-redemption/', ProductCategoryRedemptionView.as_view(), name='product-category-redemption'),
+    path('analytics/weekly-transaction-volume/', WeeklyTransactionVolumeView.as_view(), name='weekly-transaction-volume'),
 ]

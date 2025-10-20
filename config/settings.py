@@ -2,7 +2,7 @@
 from pathlib import Path
 import environ
 from datetime import timedelta
-#import cloudinary
+import cloudinary
 
 # -----------------------
 # BASE DIR
@@ -27,15 +27,15 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "https://k47k7scv-8000.inc1.devtunnels.ms/",
 ]
-
 # -----------------------
 # CORS SETTINGS
 # -----------------------
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-
-
+    "https://k47k7scv-8000.inc1.devtunnels.ms",
+    "https://boyia.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -60,6 +60,8 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.raw",
     "apps.admin_api",
+    'apps.shop',
+    "cloudinary",
 
 ]
 
@@ -123,7 +125,7 @@ DATABASES = {
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
         "OPTIONS": {
-            "options": "-c search_path=boiya"  # 👈 sets schema to 'tour'
+            "options": "-c search_path=boiya"  # 👈 sets schema to 'boiya'
         },
     }
 }
@@ -229,14 +231,15 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 # -----------------------------
 # Cloudinary Config
 # -----------------------------
-# CLOUDINARY = {
-#     "cloud_name": env("CLOUDINARY_CLOUD_NAME"),
-#     "api_key": env("CLOUDINARY_API_KEY"),
-#     "api_secret": env("CLOUDINARY_API_SECRET"),
-# }
+CLOUDINARY = {
+    "cloud_name": env("CLOUDINARY_CLOUD_NAME"),
+    "api_key": env("CLOUDINARY_API_KEY"),
+    "api_secret": env("CLOUDINARY_API_SECRET"),
+}
 
-# cloudinary.config(
-#     cloud_name=CLOUDINARY["cloud_name"],
-#     api_key=CLOUDINARY["api_key"],
-#     api_secret=CLOUDINARY["api_secret"]
-#)
+cloudinary.config(
+    cloud_name=CLOUDINARY["cloud_name"],
+    api_key=CLOUDINARY["api_key"],
+    api_secret=CLOUDINARY["api_secret"]
+)
+

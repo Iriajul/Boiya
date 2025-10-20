@@ -4,6 +4,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from datetime import timedelta
+import cloudinary.uploader  # Import for potential future use (though not directly used here)
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -30,7 +31,6 @@ class UserManager(BaseUserManager):
 
         return self.create_user(email=email, password=password, **extra_fields)
 
-
 class User(AbstractBaseUser, PermissionsMixin):
     GRADE_CHOICES = [
         ("CM2", "CM2"),
@@ -47,11 +47,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=50, unique=True)
     date_of_birth = models.DateField(null=True, blank=True)
     grade = models.CharField(max_length=10, choices=GRADE_CHOICES, null=True, blank=True)
+    profile_image = models.URLField(max_length=500, null=True, blank=True, default=None)  # New field for Cloudinary URL
 
     # Login info
     email = models.EmailField(unique=True)
     otp_code = models.CharField(max_length=6, null=True, blank=True)
     otp_expiry = models.DateTimeField(null=True, blank=True)
+    is_2fa_enabled = models.BooleanField(default=False)  # Added 2FA status
+
     # Permissions
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -71,7 +74,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # -----------------------------
     # OTP Methods
     # -----------------------------
-    def set_otp(self, length=4, expiry_minutes=5):
+    def set_otp(self, length=6, expiry_minutes=1):  # Changed to 6 digits, 1-minute expiry
         self.otp_code = get_random_string(length=length, allowed_chars="0123456789")
         self.otp_expiry = timezone.now() + timedelta(minutes=expiry_minutes)
         self.save(update_fields=["otp_code", "otp_expiry"])
@@ -91,4 +94,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def update_last_activity(self):
         self.last_activity = timezone.now()
-        self.save(update_fields=["last_activity"])    
+        self.save(update_fields=["last_activity"])
+
+    def enable_2fa(self):
+        """Enable 2FA after OTP validation."""
+        self.is_2fa_enabled = True
+        self.clear_otp()
+        self.save(update_fields=["is_2fa_enabled"])
