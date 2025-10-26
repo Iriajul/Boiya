@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import LoginView, RegisterView, VerifyOtpLoginView, LogoutView, ForgotPasswordView, VerifyOtpView, ResetPasswordView, SendView, ReceiveView, TransactionHistoryView, GradeListView, CurrentBalanceView, ProfileView, TwoFactorAuthSetupView, TwoFactorAuthValidateView
+from .views import LoginView, RegisterView, VerifyOtpLoginView, LogoutView, ForgotPasswordView, VerifyOtpView, ResetPasswordView, SendView, ReceiveView, TransactionHistoryView, GradeListView, CurrentBalanceView, ProfileView, TwoFactorAuthSetupView, TwoFactorAuthValidateView, ResendForgotPasswordOtpView, ResendTwoFactorAuthOtpView, DisableTwoFactorAuthView, RecentActivityView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='user_register'),
@@ -19,4 +19,8 @@ urlpatterns = [
     path('profile/2fa/setup/', TwoFactorAuthSetupView.as_view(), name='two-factor-auth-setup'),
     path('profile/2fa/validate/', TwoFactorAuthValidateView.as_view(), name='two-factor-auth-validate'),
     path('login/verify-otp/', VerifyOtpLoginView.as_view(), name='login-verify-otp'),
+    path('forgot-password/resend-otp/', ResendForgotPasswordOtpView.as_view(), name='resend-forgot-password-otp'),
+    path('2fa/resend-otp/', ResendTwoFactorAuthOtpView.as_view(), name='resend-two-factor-auth-otp'),
+    path('2fa/disable/', DisableTwoFactorAuthView.as_view(), name='disable-two-factor-auth'),
+    path('profile/recent-activity/', RecentActivityView.as_view(), name='user-recent-activity'),
 ]

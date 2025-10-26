@@ -2,8 +2,10 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import LoginSerializer, RegisterSerializer, LoginOtpVerifySerializer, ForgotPasswordSerializer, TransactionHistorySerializer, VerifyOtpSerializer, ResetPasswordSerializer, LogoutSerializer, TransferSerializer, ReceiveSerializer, CurrentBalanceSerializer, GradeListSerializer, ProfileSerializer, TwoFactorAuthSetupSerializer, TwoFactorAuthValidateSerializer
+from .serializers import LoginSerializer, RegisterSerializer, LoginOtpVerifySerializer, ForgotPasswordSerializer, TransactionHistorySerializer, VerifyOtpSerializer, ResetPasswordSerializer, LogoutSerializer, TransferSerializer, ReceiveSerializer, CurrentBalanceSerializer, GradeListSerializer, ProfileSerializer, TwoFactorAuthSetupSerializer, TwoFactorAuthValidateSerializer, ResendForgotPasswordOtpSerializer, ResendTwoFactorAuthOtpSerializer, DisableTwoFactorAuthSerializer, RecentActivitySerializer
 from .models import User
+from django.db.models import Q
+import logging
 from django.core.mail import send_mail
 from django.conf import settings
 from apps.raw.models import Wallet, Transaction
@@ -20,6 +22,8 @@ cloudinary.config(
     api_key=env('CLOUDINARY_API_KEY'),
     api_secret=env('CLOUDINARY_API_SECRET')
 )
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------
 # Register (Signup) View
@@ -109,10 +113,10 @@ class LoginView(generics.GenericAPIView):
 
         # If 2FA is enabled, send OTP and return temporary response
         if user.is_2fa_enabled:
-            otp = user.set_otp(length=6, expiry_minutes=1)
+            otp = user.set_otp(length=6, expiry_minutes=5)  # Updated to 5 minutes
             send_mail(
                 subject='Your Login OTP Code',
-                message=f'Your 6-digit OTP code is {otp}. It will expire in 1 minute.',
+                message=f'Your 6-digit OTP code is {otp}. It will expire in 5 minutes.',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
@@ -176,7 +180,7 @@ class ForgotPasswordView(generics.GenericAPIView):
         except User.DoesNotExist:
             return Response({"detail": "Email not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        otp = user.set_otp()
+        otp = user.set_otp(length=6, expiry_minutes=5)  # Consistent 5 minutes
 
         send_mail(
             subject="Your OTP for Password Reset",
@@ -444,7 +448,15 @@ class TwoFactorAuthSetupView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "OTP sent to your email. It expires in 1 minute."}, status=status.HTTP_200_OK)
+        otp = request.user.set_otp(length=6, expiry_minutes=5)  # Updated to 5 minutes
+        send_mail(
+            subject='Your 2FA OTP Code',
+            message=f'Your 6-digit OTP code is {otp}. It will expire in 5 minutes.',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[request.user.email],
+            fail_silently=False,
+        )
+        return Response({"detail": "OTP sent to your email. It expires in 5 minutes."}, status=status.HTTP_200_OK)
 
 class TwoFactorAuthValidateView(generics.GenericAPIView):
     """
@@ -459,7 +471,6 @@ class TwoFactorAuthValidateView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": "2FA enabled successfully."}, status=status.HTTP_200_OK)
-    
 
 # ---------------------------
 # Transaction History View
@@ -477,4 +488,95 @@ class TransactionHistoryView(generics.ListAPIView):
         wallet = getattr(user, 'wallet', None)
         if not wallet:
             return Transaction.objects.none()
-        return Transaction.objects.filter(wallet=wallet).order_by('-created_at')    
+        return Transaction.objects.filter(wallet=wallet).order_by('-created_at')
+
+# ---------------------------
+# Resend OTP Views
+# ---------------------------
+class ResendForgotPasswordOtpView(generics.GenericAPIView):
+    """
+    Resend OTP for forgot password process.
+    - POST: Requires email to resend OTP.
+    """
+    permission_classes = [permissions.AllowAny]
+    serializer_class = ResendForgotPasswordOtpSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try:
+            user = User.objects.get(email=email)
+            otp = user.set_otp(length=6, expiry_minutes=5)  # Consistent 5 minutes
+
+            send_mail(
+                subject="Your New OTP for Password Reset",
+                message=f"Your new 6-digit OTP code is {otp}. It is valid for 5 minutes.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return Response({"detail": "New OTP sent to your email.", "otp_token": str(user.pk)}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"detail": "Email not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class ResendTwoFactorAuthOtpView(generics.GenericAPIView):
+    """
+    Resend OTP for 2FA setup or validation.
+    - POST: Requires email (must match authenticated user's email).
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = ResendTwoFactorAuthOtpSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        user = request.user
+        otp = user.set_otp(length=6, expiry_minutes=5)  # Updated to 5 minutes
+
+        send_mail(
+            subject='Your New 2FA OTP Code',
+            message=f'Your new 6-digit OTP code is {otp}. It will expire in 5 minutes.',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        return Response({"detail": "New OTP sent to your email. It expires in 5 minutes."}, status=status.HTTP_200_OK)
+
+# ---------------------------
+# Disable 2FA View
+# ---------------------------
+class DisableTwoFactorAuthView(generics.GenericAPIView):
+    """
+    Disable 2FA for the authenticated user.
+    - POST: Requires current_password to verify identity.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = DisableTwoFactorAuthSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "2FA has been disabled successfully."}, status=status.HTTP_200_OK)
+    
+
+class RecentActivityView(generics.ListAPIView):
+    """
+    Retrieve the 5 latest transaction activities for the authenticated user.
+    - GET: Returns a list of the most recent transactions.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = RecentActivitySerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        wallet = getattr(user, 'wallet', None)
+        if not wallet:
+            return Transaction.objects.none()
+        return Transaction.objects.filter(wallet=wallet).order_by('-created_at')[:5]    

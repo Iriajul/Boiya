@@ -101,3 +101,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         self.is_2fa_enabled = True
         self.clear_otp()
         self.save(update_fields=["is_2fa_enabled"])
+
+    def disable_2fa(self):
+        """Disable 2FA for the user."""
+        self.is_2fa_enabled = False
+        self.clear_otp()
+        self.save(update_fields=["is_2fa_enabled"])    

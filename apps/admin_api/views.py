@@ -12,15 +12,17 @@ from apps.admin_api.models import Category, Product, Admin
 from django.utils import timezone
 from decimal import Decimal
 import csv
-from django.http import StreamingHttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from io import StringIO
 from django.db.models import Sum, Count
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
+import calendar
 from calendar import month_name
 from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
+import pytz  # Added for timezone handling
 
 class AdminLoginView(generics.GenericAPIView):
     serializer_class = AdminLoginSerializer
@@ -241,15 +243,16 @@ class StudentManagementListView(generics.ListAPIView):
 
 class ExportStudentsView(generics.GenericAPIView):
     permission_classes = [permissions.IsAdminUser]
-
+ 
     def get(self, request, *args, **kwargs):
         students = User.objects.filter(is_staff=False).order_by('-date_joined').prefetch_related('wallet__transactions')
         serializer = ExportStudentSerializer(students, many=True)
-
-        output = StringIO()
-        writer = csv.writer(output)
+ 
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="students_export.csv"'
+        writer = csv.writer(response)
         writer.writerow(['username', 'email', 'date_joined', 'is_active', 'balance', 'boiya_id', 'transactions'])
-
+ 
         for student_data in serializer.data:
             writer.writerow([
                 student_data.get('username', ''),
@@ -260,13 +263,7 @@ class ExportStudentsView(generics.GenericAPIView):
                 student_data.get('boiya_id', ''),
                 student_data.get('transactions', 0)
             ])
-
-        response = StreamingHttpResponse(
-            output.getvalue(),
-            content_type='text/csv'
-        )
-        response['Content-Disposition'] = 'attachment; filename="students_export.csv"'
-        output.close()
+ 
         return response
 
 class StudentStatusUpdateView(generics.UpdateAPIView):
@@ -709,8 +706,9 @@ class WeeklyTransactionVolumeView(generics.GenericAPIView):
     Provide analytics on weekly transaction volume based on month-based weeks.
     - Marketplace: Total coins spent on SHOP_REDEMPTION transactions.
     - P2P: Total coins sent on TRANSFER_SEND transactions.
-    - Data is aggregated over the weeks of the current month (W1 to W4, with W5 if applicable).
+    - Data is aggregated over the weeks of the current month, with weeks defined from the 1st to Sundays.
     - Only includes status='COMPLETED' transactions.
+    - Supports any month length (28, 30, or 31 days).
     """
     permission_classes = [permissions.IsAdminUser]
 
@@ -718,32 +716,35 @@ class WeeklyTransactionVolumeView(generics.GenericAPIView):
         today = timezone.now()
         current_year = today.year  # 2025
         current_month = today.month  # October
-        current_day = today.day  # 12
+        _, last_day_of_month = calendar.monthrange(current_year, current_month)  # Get actual last day (e.g., 31 for October)
 
-        # Get the first and last day of the current month
-        first_day = datetime(current_year, current_month, 1)
-        last_day = (first_day.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        # Get the first and last day of the current month with UTC timezone
+        utc = pytz.UTC
+        first_day = utc.localize(datetime(current_year, current_month, 1))
+        last_day = utc.localize(datetime(current_year, current_month, last_day_of_month, 23, 59, 59, 999999))
 
-        # Calculate week boundaries based on Sundays
+        # Calculate week boundaries based on Sundays, including the full day
         weeks = []
         current_date = first_day
         week_number = 1
 
-        while current_date <= last_day:
+        while current_date.date() <= last_day.date():
             week_start = current_date
-            # Move to the next Sunday or the end of the month
+            # Move to the end of the week (Sunday 23:59:59) or beyond the month end
             while current_date.weekday() != 6 and current_date <= last_day:
                 current_date += timedelta(days=1)
-            week_end = current_date if current_date <= last_day else last_day
-            weeks.append({
+            week_end = min(current_date.replace(hour=23, minute=59, second=59, microsecond=999999), last_day)
+            current_week = {
                 "week": f"W{week_number}",
                 "start": week_start,
                 "end": week_end
-            })
+            }
+            weeks.append(current_week)
+            print(f"Week {current_week['week']}: {current_week['start']} to {current_week['end']}")  # Debug output
             current_date += timedelta(days=1)  # Move past Sunday
             week_number += 1
 
-        # Aggregate transaction data
+        # Aggregate transaction data for the entire month, including all weeks
         response_data = []
         for week in weeks:
             marketplace_volume = Transaction.objects.filter(
