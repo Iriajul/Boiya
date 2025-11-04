@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import LoginView, RegisterView, VerifyOtpLoginView, LogoutView, ForgotPasswordView, VerifyOtpView, ResetPasswordView, SendView, ReceiveView, TransactionHistoryView, GradeListView, CurrentBalanceView, ProfileView, TwoFactorAuthSetupView, TwoFactorAuthValidateView, ResendForgotPasswordOtpView, ResendTwoFactorAuthOtpView, DisableTwoFactorAuthView, RecentActivityView
+from .views import LoginView, RegisterView, VerifyOtpLoginView, LogoutView, ForgotPasswordView, VerifyOtpView, ResetPasswordView, SendView, ReceiveView, TransactionHistoryView, GradeListView, CurrentBalanceView, ProfileView, TwoFactorAuthSetupView, TwoFactorAuthValidateView, ResendForgotPasswordOtpView, ResendTwoFactorAuthOtpView, DisableTwoFactorAuthView, RecentActivityView, TwoFactorStatusView, ResendLoginOtpView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='user_register'),
@@ -23,4 +23,6 @@ urlpatterns = [
     path('2fa/resend-otp/', ResendTwoFactorAuthOtpView.as_view(), name='resend-two-factor-auth-otp'),
     path('2fa/disable/', DisableTwoFactorAuthView.as_view(), name='disable-two-factor-auth'),
     path('profile/recent-activity/', RecentActivityView.as_view(), name='user-recent-activity'),
+    path('profile/2fa-status/', TwoFactorStatusView.as_view(), name='2fa-status'),
+    path('login/resend-otp/', ResendLoginOtpView.as_view(), name='login-resend-otp'),
 ]

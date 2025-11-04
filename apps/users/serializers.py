@@ -1,4 +1,5 @@
 # apps/users/serializers.py
+from django.utils import timezone
 from rest_framework import serializers
 from apps.users.models import User
 from apps.raw.models import Wallet, Transaction
@@ -341,3 +342,24 @@ class RecentActivitySerializer(serializers.ModelSerializer):
             if instance.description and len(instance.description.strip()) > 10 and "Shop Redemption" in instance.description.lower():
                 ret['transaction_type'] = f"{instance.description.strip()[:10]}..."
         return ret    
+    
+
+class TwoFactorStatusSerializer(serializers.Serializer):
+    is_2fa_enabled = serializers.BooleanField(read_only=True)   
+
+
+class ResendLoginOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value, is_2fa_enabled=True)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("No active 2FA user with this email.")
+        if not user.otp_code or not user.otp_expiry:
+            raise serializers.ValidationError("No active login session. Please log in again.")
+        if user.otp_expiry < timezone.now():
+            # Allow resend even if expired
+            pass
+        self.context['user'] = user
+        return value    

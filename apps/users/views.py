@@ -2,7 +2,7 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import LoginSerializer, RegisterSerializer, LoginOtpVerifySerializer, ForgotPasswordSerializer, TransactionHistorySerializer, VerifyOtpSerializer, ResetPasswordSerializer, LogoutSerializer, TransferSerializer, ReceiveSerializer, CurrentBalanceSerializer, GradeListSerializer, ProfileSerializer, TwoFactorAuthSetupSerializer, TwoFactorAuthValidateSerializer, ResendForgotPasswordOtpSerializer, ResendTwoFactorAuthOtpSerializer, DisableTwoFactorAuthSerializer, RecentActivitySerializer
+from .serializers import LoginSerializer, RegisterSerializer, LoginOtpVerifySerializer, ForgotPasswordSerializer, TransactionHistorySerializer, VerifyOtpSerializer, ResetPasswordSerializer, LogoutSerializer, TransferSerializer, ReceiveSerializer, CurrentBalanceSerializer, GradeListSerializer, ProfileSerializer, TwoFactorAuthSetupSerializer, TwoFactorAuthValidateSerializer, ResendForgotPasswordOtpSerializer, ResendTwoFactorAuthOtpSerializer, DisableTwoFactorAuthSerializer, RecentActivitySerializer, TwoFactorStatusSerializer, ResendLoginOtpSerializer
 from .models import User
 from django.db.models import Q
 import logging
@@ -580,3 +580,48 @@ class RecentActivityView(generics.ListAPIView):
         if not wallet:
             return Transaction.objects.none()
         return Transaction.objects.filter(wallet=wallet).order_by('-created_at')[:5]    
+    
+
+
+class TwoFactorStatusView(generics.GenericAPIView):
+    """
+    GET: Returns whether 2FA is enabled for the current user.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = TwoFactorStatusSerializer
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        return Response({
+            "is_2fa_enabled": user.is_2fa_enabled
+        })
+    
+class ResendLoginOtpView(generics.GenericAPIView):
+    """
+    Resend OTP during login when 2FA is enabled.
+    - Only works if user has an active OTP session (i.e., after correct password).
+    """
+    permission_classes = [AllowAny]
+    serializer_class = ResendLoginOtpSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.context['user']
+
+        # Generate new OTP
+        otp = user.set_otp(length=6, expiry_minutes=5)
+
+        # Send email
+        send_mail(
+            subject='Your Login OTP Code',
+            message=f'Your 6-digit login code is {otp}. It expires in 5 minutes.',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        return Response({
+            "detail": "New OTP sent to your email. It expires in 5 minutes.",
+            "login_token": str(user.id)  # For frontend to track session
+        }, status=status.HTTP_200_OK)    
