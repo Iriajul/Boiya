@@ -27,7 +27,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS") #, default=["127.0.0.1", "localhost"])
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "https://k47k7scv-8000.inc1.devtunnels.ms",
+    "https://1kklrhx5-8000.inc1.devtunnels.ms/",
     "http://168.231.101.121:8000",
     "https://boyia.vercel.app",
 ]
@@ -38,7 +38,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://k47k7scv-8000.inc1.devtunnels.ms",
     "https://boyia.vercel.app",
-    "https://boyia.vercel.app"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -127,9 +126,9 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
-        #"OPTIONS": {
-        #   "options": "-c search_path=boiya"  # 👈 sets schema to 'boiya'
-        #},
+        "OPTIONS": {
+           "options": "-c search_path=boiya"  # 👈 sets schema to 'boiya'
+        },
     }
 }
 

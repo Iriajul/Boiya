@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import LoginView, RegisterView, VerifyOtpLoginView, LogoutView, ForgotPasswordView, VerifyOtpView, ResetPasswordView, SendView, ReceiveView, TransactionHistoryView, GradeListView, CurrentBalanceView, ProfileView, TwoFactorAuthSetupView, TwoFactorAuthValidateView, ResendForgotPasswordOtpView, ResendTwoFactorAuthOtpView, DisableTwoFactorAuthView, RecentActivityView, TwoFactorStatusView, ResendLoginOtpView
+from .views import LoginView, RegisterView, VerifyOtpLoginView, LogoutView, ForgotPasswordView, VerifyOtpView, ResetPasswordView, SendView, ReceiveView, TransactionHistoryView, GradeListView, CurrentBalanceView, ProfileView, TwoFactorAuthSetupView, TwoFactorAuthValidateView, ResendForgotPasswordOtpView, ResendTwoFactorAuthOtpView, DisableTwoFactorAuthView, RecentActivityView, TwoFactorStatusView, ResendLoginOtpView, DeleteAccountView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='user_register'),
@@ -25,4 +25,5 @@ urlpatterns = [
     path('profile/recent-activity/', RecentActivityView.as_view(), name='user-recent-activity'),
     path('profile/2fa-status/', TwoFactorStatusView.as_view(), name='2fa-status'),
     path('login/resend-otp/', ResendLoginOtpView.as_view(), name='login-resend-otp'),
+    path('profile/delete-account/', DeleteAccountView.as_view(), name='delete-account'),
 ]

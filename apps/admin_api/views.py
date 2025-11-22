@@ -764,3 +764,4 @@ class WeeklyTransactionVolumeView(generics.GenericAPIView):
             })
 
         return Response(response_data)
+    

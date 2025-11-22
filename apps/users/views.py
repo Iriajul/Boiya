@@ -625,3 +625,46 @@ class ResendLoginOtpView(generics.GenericAPIView):
             "detail": "New OTP sent to your email. It expires in 5 minutes.",
             "login_token": str(user.id)  # For frontend to track session
         }, status=status.HTTP_200_OK)    
+    
+
+# ---------------------------
+# Delete My Account View (Password only – fixed)
+# ---------------------------
+class DeleteAccountView(generics.GenericAPIView):
+    """
+    Permanently delete the authenticated user's account.
+    Requires current password + typing "delete" for confirmation.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        password = request.data.get("password")
+        confirm = request.data.get("confirm", "").lower()
+
+        # 1. Check password
+        if not password or not user.check_password(password):
+            return Response(
+                {"detail": "Incorrect password."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Check confirmation text
+        if confirm != "delete":
+            return Response(
+                {"detail": "You must type 'delete' in the confirm field to proceed."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Delete the account
+        email = user.email
+        user_id = user.id
+
+        user.delete()  # Cascades to wallet, transactions, etc.
+
+        logger.warning(f"ACCOUNT DELETED → ID: {user_id} | Email: {email}")
+
+        return Response({
+            "detail": "Your account and all data have been permanently deleted.",
+            "success": True   # ← Python True (fixed)
+        }, status=status.HTTP_200_OK)
