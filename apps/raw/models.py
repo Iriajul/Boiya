@@ -47,7 +47,7 @@ class Transaction(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
-    recipient_wallet = models.ForeignKey('Wallet', on_delete=models.SET_NULL, null=True, blank=True, related_name='received_transactions')
+    recipient_wallet = models.ForeignKey('Wallet', on_delete=models.SET_NULL, null=True, blank=True, related_name='received_transactions',db_constraint=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='COMPLETED')
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
