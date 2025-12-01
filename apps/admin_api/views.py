@@ -11,6 +11,7 @@ from apps.raw.models import Wallet, Transaction
 from apps.admin_api.models import Category, Product, Admin
 from django.utils import timezone
 from decimal import Decimal
+from .permissions import IsSuperuser
 import csv
 from django.http import HttpResponse, StreamingHttpResponse
 from io import StringIO
@@ -118,7 +119,7 @@ class ResendAdminOtpView(generics.GenericAPIView):
         }, status=status.HTTP_200_OK)
 
 class LogoutView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -138,7 +139,7 @@ class AdminProfileView(generics.RetrieveUpdateAPIView):
     - PATCH: Update profile details (name, phone, location, department, bio, profile picture).
     - Only accessible to the logged-in admin (is_superuser=True).
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = AdminProfileSerializer
 
     def get_object(self):
@@ -161,7 +162,7 @@ class AdminPasswordChangeView(generics.GenericAPIView):
     - POST: Requires current_password, new_password, and confirm_password.
     - Only accessible to the logged-in admin (is_superuser=True).
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = AdminPasswordSerializer
 
     def post(self, request, *args, **kwargs):
@@ -173,7 +174,7 @@ class AdminPasswordChangeView(generics.GenericAPIView):
         return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 class GrantCoinsView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = GrantCoinsSerializer
 
     def post(self, request, *args, **kwargs):
@@ -207,7 +208,7 @@ class GrantCoinsView(generics.GenericAPIView):
 
 class StudentManagementListView(generics.ListAPIView):
     serializer_class = StudentManagementSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     queryset = User.objects.filter(is_staff=False).order_by('-date_joined').prefetch_related('wallet__transactions')
 
     def get_queryset(self):
@@ -242,7 +243,7 @@ class StudentManagementListView(generics.ListAPIView):
         return Response(response_data)
 
 class ExportStudentsView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
  
     def get(self, request, *args, **kwargs):
         students = User.objects.filter(is_staff=False).order_by('-date_joined').prefetch_related('wallet__transactions')
@@ -268,7 +269,7 @@ class ExportStudentsView(generics.GenericAPIView):
 
 class StudentStatusUpdateView(generics.UpdateAPIView):
     serializer_class = StudentManagementSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     queryset = User.objects.filter(is_staff=False)
     lookup_field = 'id'
 
@@ -283,7 +284,7 @@ class StudentStatusUpdateView(generics.UpdateAPIView):
         return Response({"detail": "No action specified"}, status=400)
 
 class StudentDeleteView(generics.DestroyAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     queryset = User.objects.filter(is_staff=False)
     lookup_field = 'id'
 
@@ -293,7 +294,7 @@ class StudentDeleteView(generics.DestroyAPIView):
         return Response({"detail": "Student deleted successfully"})
 
 class CurrencyStatsView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = CurrencyStatsSerializer
 
     def get(self, request, *args, **kwargs):
@@ -321,7 +322,7 @@ class CurrencyStatsView(generics.GenericAPIView):
         return Response(serializer.data)
 
 class AllocateCoinsView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = AllocateCoinsSerializer
 
     def get(self, request, *args, **kwargs):
@@ -360,7 +361,7 @@ class AllocateCoinsView(generics.GenericAPIView):
             return Response({"detail": "User not found or is an admin."}, status=status.HTTP_404_NOT_FOUND)
 
 class AllocationHistoryView(generics.ListAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = AllocationHistorySerializer
 
     def get_queryset(self):
@@ -373,7 +374,7 @@ class CustomPagination(PageNumberPagination):
     max_page_size = 100
 
 class TransactionHistoryView(generics.ListAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = TransactionHistorySerializer
     pagination_class = CustomPagination
 
@@ -409,7 +410,7 @@ class CategoryListCreateView(generics.ListCreateAPIView):
     - Requires admin authentication.
     - POST requires 'name' field.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
 
@@ -425,7 +426,7 @@ class CategoryPauseView(generics.UpdateAPIView):
     - Requires admin authentication.
     - PATCH to toggle between paused and active.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
 
@@ -441,7 +442,7 @@ class CategoryPlayView(generics.UpdateAPIView):
     - Requires admin authentication.
     - PATCH to set paused to false.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
 
@@ -459,7 +460,7 @@ class CategoryDeleteView(generics.DestroyAPIView):
     - Requires admin authentication.
     - Fails if item_count > 0.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     queryset = Category.objects.all()
 
     def destroy(self, request, *args, **kwargs):
@@ -475,7 +476,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
     - Requires admin authentication.
     - POST requires 'name', 'description', 'price', 'category', and optional 'thumbnail' and 'file'.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
@@ -491,7 +492,7 @@ class ProductUpdateView(generics.UpdateAPIView):
     - Requires admin authentication.
     - PATCH allows editing all fields, including category and date_submitted, with optional file uploads.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
@@ -508,7 +509,7 @@ class ProductPauseView(generics.UpdateAPIView):
     - Requires admin authentication.
     - PATCH to toggle between paused and active.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
@@ -524,7 +525,7 @@ class ProductPlayView(generics.UpdateAPIView):
     - Requires admin authentication.
     - PATCH to set paused to false.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
@@ -542,7 +543,7 @@ class ProductDeleteView(generics.DestroyAPIView):
     - Requires admin authentication.
     - Decrements category item_count upon deletion.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     queryset = Product.objects.all()
 
     def destroy(self, request, *args, **kwargs):
@@ -558,7 +559,7 @@ class TopPurchasingProductsView(generics.ListAPIView):
     - Shows the top products with their category and sales.
     - Limited to 5 items by default.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
     serializer_class = ProductSerializer
 
     def get_queryset(self):
@@ -581,7 +582,7 @@ class CategoryDistributionView(generics.GenericAPIView):
     Provide distribution of products across categories.
     - Shows total products and products per category.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
 
     def get(self, request, *args, **kwargs):
         total_products = Product.objects.count()
@@ -603,7 +604,7 @@ class CoinAnalyticsView(generics.GenericAPIView):
     - Coins spent: Total coins spent on product purchases via PurchaseView.
     - Data is aggregated monthly for the current year.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
 
     def get(self, request, *args, **kwargs):
         # Get all months (1-12) with their names
@@ -648,7 +649,7 @@ class ProductCategoryRedemptionView(generics.GenericAPIView):
     - Calculates the percentage of total coins spent per category based on product sales.
     - Includes an 'Other' category for categories with less than 5% contribution.
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
 
     def get(self, request, *args, **kwargs):
         current_year = timezone.now().year  # 2025
@@ -710,7 +711,7 @@ class WeeklyTransactionVolumeView(generics.GenericAPIView):
     - Only includes status='COMPLETED' transactions.
     - Supports any month length (28, 30, or 31 days).
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperuser]
 
     def get(self, request, *args, **kwargs):
         today = timezone.now()
